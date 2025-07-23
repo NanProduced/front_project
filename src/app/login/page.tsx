@@ -50,7 +50,6 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSite, setSelectedSite] = useState<SiteConfig>(getDefaultSite());
   const [isClient, setIsClient] = useState(false);
-  const [cookieInfo, setCookieInfo] = useState('');
 
   useEffect(() => {
     // 标记为客户端渲染
@@ -59,8 +58,6 @@ const Login = () => {
     // 检查是否有认证相关的Cookie
     const checkCookies = () => {
       if (document.cookie) {
-        setCookieInfo(`检测到Cookie: ${document.cookie.substring(0, 50)}${document.cookie.length > 50 ? '...' : ''}`);
-
         // 检查是否有认证相关的cookie
         const hasCookies = document.cookie.split(';').some(c => {
           const name = c.trim().split('=')[0].toLowerCase();
@@ -77,8 +74,6 @@ const Login = () => {
             router.push('/dashboard');
           }, 1000);
         }
-      } else {
-        setCookieInfo('未检测到任何Cookie');
       }
     };
 
@@ -138,7 +133,6 @@ const Login = () => {
           <p className="text-gray-400 text-sm">
             首次使用? <Link href="/register" className="text-blue-400 hover:underline">联系管理员创建账号</Link>
           </p>
-          <Link href="/auth-test" className="text-blue-400 hover:underline text-sm">检查认证状态</Link>
         </div>
 
         {/* 当前选择的站点信息 */}
@@ -149,15 +143,6 @@ const Login = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               您当前选择的是{selectedSite.name}站点
-            </div>
-          </div>
-        )}
-
-        {/* Cookie信息显示（开发调试用） */}
-        {cookieInfo && (
-          <div className="mt-4 p-3 bg-gray-800/50 rounded-md border border-gray-700">
-            <div className="text-sm text-gray-400 break-all">
-              {cookieInfo}
             </div>
           </div>
         )}

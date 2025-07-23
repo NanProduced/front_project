@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { GATEWAY_URL, logout } from "@/config/auth";
 import SiteSelector from "@/components/SiteSelector";
 import { SiteConfig } from "@/config/sites";
+import { getCurrentUser, UserInfoResponse } from "@/services/userService";
+import useApi from "@/hooks/useApi";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -13,12 +15,16 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [userName, setUserName] = useState("用户");
+  const [userRole, setUserRole] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [activeSite, setActiveSite] = useState<SiteConfig | null>(null);
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isNotificationsOpen, setNotificationsOpen] = useState(false);
   const [isUserMenuOpen, setUserMenuOpen] = useState(false);
   const pathname = usePathname();
+  
+  // 使用useApi hook获取用户信息
+  const { data: userData, loading: userLoading, error: userError, execute: fetchUser } = useApi(getCurrentUser);
 
   // 处理站点变更
   const handleSiteChange = (site: SiteConfig) => {
@@ -28,36 +34,47 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     
     // 模拟API调用以获取新站点的数据
     setTimeout(() => {
-      setUserName(`${site.name}用户`);
       setIsLoading(false);
     }, 1000);
   };
 
   useEffect(() => {
     // 获取当前用户信息
-    const fetchUserInfo = async () => {
+    const loadUserInfo = async () => {
+      setIsLoading(true);
       try {
-        // 使用配置中的网关地址
-        // 实际项目中使用：
-        // const response = await fetch(`${GATEWAY_URL}/core/api/user/current`, {
-        //   credentials: 'include' // 确保发送Cookie
-        // });
-        // const data = await response.json();
-        // setUserName(data.name || "用户");
-        
-        // 模拟网络请求延迟
-        setTimeout(() => {
-          setUserName("演示用户");
-          setIsLoading(false);
-        }, 1000);
+        await fetchUser();
       } catch (error) {
         console.error("获取用户信息失败", error);
+      } finally {
         setIsLoading(false);
       }
     };
 
-    fetchUserInfo();
-  }, []);
+    loadUserInfo();
+  }, [fetchUser]);
+  
+  // 当用户数据加载完成后更新UI
+  useEffect(() => {
+    if (userData) {
+      setUserName(userData.username);
+      // 获取用户主要角色
+      if (userData.roles && userData.roles.length > 0) {
+        setUserRole(userData.roles[0].displayName || userData.roles[0].roleName);
+      }
+    }
+  }, [userData]);
+  
+  // 处理API错误
+  useEffect(() => {
+    if (userError) {
+      console.error("用户信息获取失败:", userError);
+      // 如果是未授权错误，重定向到登录页（虽然拦截器已经处理这个问题，这里是双重保险）
+      if (userError.message === '登录已过期，请重新登录') {
+        logout();
+      }
+    }
+  }, [userError]);
 
   // 关闭所有弹出菜单
   useEffect(() => {
@@ -209,10 +226,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <div className="flex items-center">
               <span className="text-sm text-gray-500 mr-2">当前站点</span>
               <span className="text-base font-medium text-blue-400 mr-1">
-                {activeSite ? activeSite.region : 'CN'}
-              </span>
-              <span className="text-sm text-gray-300">
-                {activeSite ? activeSite.name : '深圳'}
+                {userData ? userData.orgName : (activeSite ? activeSite.region : 'CN')}
               </span>
             </div>
             
@@ -265,7 +279,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               )}
             </div>
             
-                          {/* 用户信息 */}
+            {/* 用户信息 */}
             <div className="relative">
               <button
                 className="flex items-center focus:outline-none"
@@ -276,7 +290,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                   <span className="text-sm font-medium">{userName.charAt(0)}</span>
                 </div>
                 <span className="text-gray-300 text-sm font-medium">
-                  {isLoading ? "加载中..." : `${userName}`}
+                  {userLoading ? "加载中..." : userName}
                 </span>
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -288,7 +302,16 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 <div className="absolute right-0 mt-2 w-48 bg-[#0f172a] border border-gray-800 rounded-md shadow-lg z-20" onClick={e => e.stopPropagation()}>
                   <div className="p-3 border-b border-gray-800">
                     <p className="text-sm font-medium text-gray-300">{userName}</p>
-                    <p className="text-xs text-gray-500 mt-1">用户角色：管理员</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {userData?.roles && userData.roles.length > 0 
+                        ? `用户角色：${userRole}` 
+                        : '用户角色：普通用户'}
+                    </p>
+                    {userData?.email && (
+                      <p className="text-xs text-gray-500 mt-1 truncate" title={userData.email}>
+                        {userData.email}
+                      </p>
+                    )}
                   </div>
                   <div className="py-1">
                     <Link href="/profile" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800">
@@ -307,19 +330,17 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 </div>
               )}
             </div>
-            
-            {/* 退出按钮 - 移到下拉菜单中，此处可以删除 */}
           </div>
         </div>
       </nav>
 
-      {/* 站点切换提示（如果选择了非中国大陆站点，且该站点可用） */}
-      {activeSite && activeSite.id !== 'cn-shenzhen' && activeSite.gatewayUrl !== '#' && (
+      {/* 站点切换提示（如果有用户数据且不是默认站点） */}
+      {userData && userData.orgName && userData.orgName !== '默认组织' && (
         <div className="bg-blue-900/20 text-blue-200 py-2 px-4 text-sm flex items-center justify-center border-b border-blue-800">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          您当前正在访问 {activeSite.name}站点
+          您当前正在访问 <span className="font-medium mx-1">{userData.orgName}</span> 组织
         </div>
       )}
       

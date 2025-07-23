@@ -1,5 +1,29 @@
 import { coreApi } from '@/utils/api';
 
+// 用户信息响应接口 - 根据API文档中的UserInfoResponse结构定义
+export interface UserInfoResponse {
+  uid: number;
+  username: string;
+  oid: number;
+  orgName: string;
+  roles: RoleDTO[];
+  ugid: number;
+  ugName: string;
+  email?: string;
+  phone?: string;
+  active: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 角色信息接口
+export interface RoleDTO {
+  rid: number;
+  oid: number;
+  roleName: string;
+  displayName?: string;
+}
+
 export interface User {
   id: string;
   username: string;
@@ -31,7 +55,7 @@ export interface UserGroup {
  * 获取当前登录用户信息
  */
 export const getCurrentUser = () => {
-  return coreApi.get<User>('/user/current');
+  return coreApi.get<UserInfoResponse>('/user/current');
 };
 
 /**

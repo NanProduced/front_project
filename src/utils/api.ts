@@ -37,14 +37,6 @@ const apiClient = axios.create({
 // 请求拦截器
 apiClient.interceptors.request.use(
   (config: AxiosRequestConfig) => {
-    // 获取网关地址
-    const gatewayUrl = getCurrentGatewayUrl();
-    
-    // 设置基础URL
-    if (!config.baseURL) {
-      config.baseURL = gatewayUrl;
-    }
-    
     // 设置通用headers
     config.headers = {
       ...config.headers,
@@ -71,7 +63,7 @@ apiClient.interceptors.response.use(
       // 401未授权，重定向到登录页面
       if (status === ApiResponseCode.UNAUTHORIZED) {
         if (typeof window !== 'undefined') {
-          window.location.href = '/login';
+          window.location.href = '/';
         }
         return Promise.reject(new Error('登录已过期，请重新登录'));
       }
