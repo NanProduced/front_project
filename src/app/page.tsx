@@ -13,6 +13,6 @@ export default function Home() {
       <ProductsSection />
       <SolutionsSection />
       <Footer />
-    </main>
+      </main>
   );
 }
