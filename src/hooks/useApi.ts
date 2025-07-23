@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-import { ApiResponse } from '@/utils/api';
 
 /**
  * API请求hook，用于管理API请求的状态
@@ -7,7 +6,7 @@ import { ApiResponse } from '@/utils/api';
  * @returns 包含数据、加载状态、错误信息和执行函数的对象
  */
 export function useApi<T, P extends any[]>(
-  apiFunction: (...args: P) => Promise<ApiResponse<T>>
+  apiFunction: (...args: P) => Promise<T>
 ) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -21,20 +20,13 @@ export function useApi<T, P extends any[]>(
         setError(null);
         
         const response = await apiFunction(...args);
-        
-        if (response.success) {
-          setData(response.data || null);
-          return response.data;
-        } else {
-          const errorMessage = response.message || '请求失败';
-          const error = new Error(errorMessage);
-          setError(error);
-          return null;
-        }
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error('未知错误');
-        setError(error);
-        return null;
+        setData(response);
+        return response;
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : '请求失败';
+        console.error('API请求错误:', errorMessage);
+        setError(error instanceof Error ? error : new Error(errorMessage));
+        throw error;
       } finally {
         setLoading(false);
       }
@@ -42,64 +34,67 @@ export function useApi<T, P extends any[]>(
     [apiFunction]
   );
 
-  return {
-    data,
-    loading,
-    error,
-    execute
-  };
+  return { data, loading, error, execute };
 }
 
 /**
- * 带缓存的API请求hook，适用于不常变化的数据
+ * 带缓存的API请求hook，用于减少重复请求
  * @param apiFunction API请求函数
  * @param cacheKey 缓存键
- * @param cacheTime 缓存时间（毫秒）
+ * @param ttl 缓存有效期（毫秒）
  * @returns 包含数据、加载状态、错误信息和执行函数的对象
  */
 export function useCachedApi<T, P extends any[]>(
-  apiFunction: (...args: P) => Promise<ApiResponse<T>>,
+  apiFunction: (...args: P) => Promise<T>,
   cacheKey: string,
-  cacheTime: number = 5 * 60 * 1000 // 默认5分钟
+  ttl: number = 60000 // 默认缓存1分钟
 ) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
 
-  // 从缓存中获取数据
-  const getFromCache = useCallback(() => {
+  // 从缓存获取数据
+  const getCachedData = useCallback(() => {
     if (typeof window === 'undefined') return null;
     
-    const cachedData = localStorage.getItem(`api_cache_${cacheKey}`);
-    if (!cachedData) return null;
+    const cachedItem = localStorage.getItem(`api_cache_${cacheKey}`);
+    if (!cachedItem) return null;
     
     try {
-      const { data, timestamp } = JSON.parse(cachedData);
+      const { data, timestamp } = JSON.parse(cachedItem);
+      const now = Date.now();
       
       // 检查缓存是否过期
-      if (Date.now() - timestamp > cacheTime) {
-        localStorage.removeItem(`api_cache_${cacheKey}`);
-        return null;
+      if (now - timestamp <= ttl) {
+        return data;
       }
       
-      return data;
-    } catch (err) {
+      // 缓存已过期，删除
       localStorage.removeItem(`api_cache_${cacheKey}`);
-      return null;
+    } catch (e) {
+      console.error('缓存解析错误:', e);
+      localStorage.removeItem(`api_cache_${cacheKey}`);
     }
-  }, [cacheKey, cacheTime]);
+    
+    return null;
+  }, [cacheKey, ttl]);
 
-  // 将数据保存到缓存
-  const saveToCache = useCallback(
+  // 设置缓存
+  const setCachedData = useCallback(
     (data: T) => {
       if (typeof window === 'undefined') return;
       
-      const cacheData = {
-        data,
-        timestamp: Date.now()
-      };
-      
-      localStorage.setItem(`api_cache_${cacheKey}`, JSON.stringify(cacheData));
+      try {
+        localStorage.setItem(
+          `api_cache_${cacheKey}`,
+          JSON.stringify({
+            data,
+            timestamp: Date.now()
+          })
+        );
+      } catch (e) {
+        console.error('缓存设置错误:', e);
+      }
     },
     [cacheKey]
   );
@@ -108,88 +103,35 @@ export function useCachedApi<T, P extends any[]>(
   const execute = useCallback(
     async (...args: P) => {
       try {
+        setLoading(true);
+        setError(null);
+        
         // 尝试从缓存获取
-        const cachedData = getFromCache();
+        const cachedData = getCachedData();
         if (cachedData) {
           setData(cachedData);
           return cachedData;
         }
         
-        setLoading(true);
-        setError(null);
-        
+        // 缓存未命中，发起请求
         const response = await apiFunction(...args);
-        
-        if (response.success) {
-          const responseData = response.data || null;
-          setData(responseData);
-          
-          // 保存到缓存
-          if (responseData) {
-            saveToCache(responseData);
-          }
-          
-          return responseData;
-        } else {
-          const errorMessage = response.message || '请求失败';
-          const error = new Error(errorMessage);
-          setError(error);
-          return null;
-        }
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error('未知错误');
-        setError(error);
-        return null;
+        setData(response);
+        setCachedData(response);
+        return response;
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : '请求失败';
+        console.error('API请求错误:', errorMessage);
+        setError(error instanceof Error ? error : new Error(errorMessage));
+        throw error;
       } finally {
         setLoading(false);
       }
     },
-    [apiFunction, getFromCache, saveToCache]
+    [apiFunction, getCachedData, setCachedData]
   );
 
-  // 强制刷新，忽略缓存
-  const refresh = useCallback(
-    async (...args: P) => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const response = await apiFunction(...args);
-        
-        if (response.success) {
-          const responseData = response.data || null;
-          setData(responseData);
-          
-          // 更新缓存
-          if (responseData) {
-            saveToCache(responseData);
-          }
-          
-          return responseData;
-        } else {
-          const errorMessage = response.message || '请求失败';
-          const error = new Error(errorMessage);
-          setError(error);
-          return null;
-        }
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error('未知错误');
-        setError(error);
-        return null;
-      } finally {
-        setLoading(false);
-      }
-    },
-    [apiFunction, saveToCache]
-  );
+  return { data, loading, error, execute };
+} 
 
-  return {
-    data,
-    loading,
-    error,
-    execute,
-    refresh
-  };
-}
-
+// 添加默认导出，指向useApi函数
 export default useApi; 

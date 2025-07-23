@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import TreeView, { TreeNode } from './TreeView';
 import { getTerminalGroupTree } from '@/services/terminalService';
-import useApi from '@/hooks/useApi';
+import { useApi } from '@/hooks/useApi';
 import { TerminalGroup } from '@/services/terminalService';
 
 interface TerminalGroupTreeProps {

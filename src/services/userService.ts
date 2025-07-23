@@ -44,39 +44,56 @@ export interface UserGroup {
   id: string;
   name: string;
   description?: string;
-  parentId: string | null;
-  organizationId: string;
-  level: number;
-  path: string;
+  parentId?: string;
   children?: UserGroup[];
 }
 
 /**
  * 获取当前登录用户信息
  */
-export const getCurrentUser = () => {
-  return coreApi.get<UserInfoResponse>('/user/current');
+export const getCurrentUser = async () => {
+  try {
+    console.log('正在请求用户信息...');
+    // coreApi.get已经处理了DynamicResponse结构，直接返回data部分
+    const userData = await coreApi.get<UserInfoResponse>('/user/current');
+    console.log('用户信息获取成功:', userData);
+    return userData;
+  } catch (error) {
+    console.error('获取用户信息失败:', error);
+    throw error;
+  }
+};
+
+/**
+ * 创建用户
+ * @param data 用户数据
+ */
+export const createUser = (data: any) => {
+  return coreApi.post('/user/create', data);
+};
+
+/**
+ * 更新用户
+ * @param data 用户数据
+ */
+export const updateUser = (data: any) => {
+  return coreApi.put('/user/update', data);
+};
+
+/**
+ * 删除用户
+ * @param userId 用户ID
+ */
+export const deleteUser = (userId: string) => {
+  return coreApi.delete(`/user/delete?uid=${userId}`);
 };
 
 /**
  * 获取用户列表
  * @param params 查询参数
  */
-export const getUsers = (params: {
-  page?: number;
-  size?: number;
-  keyword?: string;
-  status?: number;
-  userGroupId?: string;
-}) => {
-  return coreApi.get<{
-    content: User[];
-    totalElements: number;
-    totalPages: number;
-    size: number;
-    number: number;
-    numberOfElements: number;
-  }>('/user/list', params);
+export const getUserList = (params: any) => {
+  return coreApi.post('/user-group/list', params);
 };
 
 /**
@@ -85,50 +102,6 @@ export const getUsers = (params: {
  */
 export const getUserById = (userId: string) => {
   return coreApi.get<User>(`/user/${userId}`);
-};
-
-/**
- * 创建用户
- * @param userData 用户数据
- */
-export const createUser = (userData: {
-  username: string;
-  nickname: string;
-  password: string;
-  email?: string;
-  phone?: string;
-  role: string;
-  userGroupIds: string[];
-  status?: number;
-}) => {
-  return coreApi.post<User>('/user/create', userData);
-};
-
-/**
- * 更新用户信息
- * @param userId 用户ID
- * @param userData 用户数据
- */
-export const updateUser = (
-  userId: string,
-  userData: {
-    nickname?: string;
-    email?: string;
-    phone?: string;
-    role?: string;
-    userGroupIds?: string[];
-    status?: number;
-  }
-) => {
-  return coreApi.put<User>(`/user/${userId}`, userData);
-};
-
-/**
- * 删除用户
- * @param userId 用户ID
- */
-export const deleteUser = (userId: string) => {
-  return coreApi.delete(`/user/${userId}`);
 };
 
 /**
@@ -201,7 +174,7 @@ export const getVisibleRoles = () => {
 
 export default {
   getCurrentUser,
-  getUsers,
+  getUsers: getUserList, // Renamed from getUsers to getUserList to match new API
   getUserById,
   createUser,
   updateUser,

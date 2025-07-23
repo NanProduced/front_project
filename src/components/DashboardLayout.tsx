@@ -7,7 +7,7 @@ import { GATEWAY_URL, logout } from "@/config/auth";
 import SiteSelector from "@/components/SiteSelector";
 import { SiteConfig } from "@/config/sites";
 import { getCurrentUser, UserInfoResponse } from "@/services/userService";
-import useApi from "@/hooks/useApi";
+import { useApi } from "@/hooks/useApi";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -45,7 +45,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       try {
         await fetchUser();
       } catch (error) {
-        console.error("获取用户信息失败", error);
+        console.error("用户信息获取失败", error);
       } finally {
         setIsLoading(false);
       }
@@ -57,7 +57,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   // 当用户数据加载完成后更新UI
   useEffect(() => {
     if (userData) {
-      setUserName(userData.username);
+      console.log("用户数据已加载:", userData);
+      setUserName(userData.username || '用户');
       // 获取用户主要角色
       if (userData.roles && userData.roles.length > 0) {
         setUserRole(userData.roles[0].displayName || userData.roles[0].roleName);
@@ -86,8 +87,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     return () => window.removeEventListener('click', closeMenus);
   }, []);
 
+  // 处理退出登录
   const handleLogout = () => {
-    // 使用配置中的登出函数
     logout();
   };
 
@@ -191,7 +192,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0a1022]">
-      {/* 顶部导航栏 - 元素分布两侧，增大按钮尺寸 */}
+      {/* 顶部导航栏 */}
       <nav className="bg-[#050b1f] border-b border-gray-800 px-6 py-3.5 z-10">
         <div className="flex justify-between items-center w-full">
           {/* 左侧元素 */}
@@ -226,7 +227,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <div className="flex items-center">
               <span className="text-sm text-gray-500 mr-2">当前站点</span>
               <span className="text-base font-medium text-blue-400 mr-1">
-                {userData ? userData.orgName : (activeSite ? activeSite.region : 'CN')}
+                {activeSite ? activeSite.name : 'CN'}
               </span>
             </div>
             
@@ -240,10 +241,12 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 onClick={toggleNotifications}
                 aria-label="通知"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></span>
+                {notifications.length > 0 && (
+                  <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500"></span>
+                )}
               </button>
               
               {/* 通知下拉面板 */}
@@ -287,10 +290,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 aria-label="用户菜单"
               >
                 <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mr-2">
-                  <span className="text-sm font-medium">{userName.charAt(0)}</span>
+                  <span className="text-sm font-medium">{userName ? userName.charAt(0) : '用'}</span>
                 </div>
                 <span className="text-gray-300 text-sm font-medium">
-                  {userLoading ? "加载中..." : userName}
+                  {userLoading ? "加载中..." : (userName || '用户')}
                 </span>
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -301,7 +304,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               {isUserMenuOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-[#0f172a] border border-gray-800 rounded-md shadow-lg z-20" onClick={e => e.stopPropagation()}>
                   <div className="p-3 border-b border-gray-800">
-                    <p className="text-sm font-medium text-gray-300">{userName}</p>
+                    <p className="text-sm font-medium text-gray-300">{userName || '用户'}</p>
                     <p className="text-xs text-gray-500 mt-1">
                       {userData?.roles && userData.roles.length > 0 
                         ? `用户角色：${userRole}` 
@@ -314,33 +317,53 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                     )}
                   </div>
                   <div className="py-1">
-                    <Link href="/profile" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800">
-                      个人资料
-                    </Link>
-                    <Link href="/settings" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800">
-                      账号设置
-                    </Link>
-                    <button 
-                      onClick={handleLogout}
-                      className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-800"
+                    <button
+                      className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 flex items-center"
+                      onClick={() => {/* 个人资料功能 */}}
                     >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      个人资料
+                    </button>
+                    <button
+                      className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 flex items-center"
+                      onClick={() => {/* 设置功能 */}}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      设置
+                    </button>
+                  </div>
+                  <div className="border-t border-gray-800 py-1">
+                    <button
+                      className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-gray-800 flex items-center"
+                      onClick={handleLogout}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
                       退出登录
                     </button>
                   </div>
                 </div>
               )}
             </div>
+            
+            {/* 退出按钮 - 移到下拉菜单中，此处可以删除 */}
           </div>
         </div>
       </nav>
 
-      {/* 站点切换提示（如果有用户数据且不是默认站点） */}
-      {userData && userData.orgName && userData.orgName !== '默认组织' && (
+      {/* 站点切换提示（如果选择了非中国大陆站点，且该站点可用） */}
+      {activeSite && activeSite.id !== 'cn-shenzhen' && activeSite.gatewayUrl !== '#' && (
         <div className="bg-blue-900/20 text-blue-200 py-2 px-4 text-sm flex items-center justify-center border-b border-blue-800">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          您当前正在访问 <span className="font-medium mx-1">{userData.orgName}</span> 组织
+          您当前正在访问 {activeSite.name}站点
         </div>
       )}
       

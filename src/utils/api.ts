@@ -1,25 +1,7 @@
-import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
-import { getCurrentGatewayUrl } from '@/config/auth';
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import { redirect } from 'next/navigation';
 
-// 微服务前缀常量
-export const API_PREFIXES = {
-  CORE: '/core/api',
-  AUTH: '/auth/api',
-  MESSAGE: '/message/api/v1'
-};
-
-// 响应状态码
-export enum ApiResponseCode {
-  SUCCESS = 200,
-  CREATED = 201,
-  BAD_REQUEST = 400,
-  UNAUTHORIZED = 401,
-  FORBIDDEN = 403,
-  NOT_FOUND = 404,
-  INTERNAL_SERVER_ERROR = 500
-}
-
-// 响应结构接口
+// API响应接口
 export interface ApiResponse<T = any> {
   code: number;
   message: string;
@@ -28,213 +10,256 @@ export interface ApiResponse<T = any> {
   success: boolean;
 }
 
+// 后端统一响应结构
+export interface DynamicResponse<T = any> {
+  code: number;
+  msg: string;
+  data: T;
+}
+
+// API前缀
+export const API_PREFIXES = {
+  AUTH: '/auth/api',
+  CORE: '/core/api',
+  MESSAGE: '/message/api/v1',
+};
+
 // 创建axios实例
-const apiClient = axios.create({
-  timeout: 30000, // 请求超时时间：30秒
-  withCredentials: true, // 允许携带cookie
+const apiClient: AxiosInstance = axios.create({
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 // 请求拦截器
 apiClient.interceptors.request.use(
-  (config: AxiosRequestConfig) => {
-    // 设置通用headers
-    config.headers = {
-      ...config.headers,
-      'Content-Type': 'application/json',
-    };
-    
+  (config) => {
+    // 可以在这里添加认证信息，如token
     return config;
   },
-  (error: AxiosError) => {
+  (error) => {
     return Promise.reject(error);
   }
 );
 
 // 响应拦截器
 apiClient.interceptors.response.use(
-  (response: AxiosResponse) => {
-    // 直接返回响应数据
+  (response) => {
     return response;
   },
   (error: AxiosError) => {
-    if (error.response) {
-      const status = error.response.status;
-      
-      // 401未授权，重定向到登录页面
-      if (status === ApiResponseCode.UNAUTHORIZED) {
-        if (typeof window !== 'undefined') {
-          window.location.href = '/';
-        }
-        return Promise.reject(new Error('登录已过期，请重新登录'));
-      }
-      
-      // 403禁止访问
-      if (status === ApiResponseCode.FORBIDDEN) {
-        return Promise.reject(new Error('您没有权限执行此操作'));
-      }
-      
-      // 500服务器错误
-      if (status === ApiResponseCode.INTERNAL_SERVER_ERROR) {
-        return Promise.reject(new Error('服务器错误，请稍后重试'));
+    // 处理401未授权错误，重定向到登录页
+    if (error.response && error.response.status === 401) {
+      console.error('用户未授权，重定向到首页');
+      // 在客户端环境下执行重定向
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
       }
     }
-    
     return Promise.reject(error);
   }
 );
 
-// API调用函数
-export const api = {
+// 处理API错误
+const handleApiError = (error: any): never => {
+  console.error('API请求错误:', error);
+  
+  if (error.response) {
+    // 服务器响应了，但状态码不在2xx范围
+    const status = error.response.status;
+    const data = error.response.data;
+    
+    if (status === 401) {
+      throw new Error('未授权，请重新登录');
+    } else if (status === 403) {
+      throw new Error('权限不足，无法访问');
+    } else if (status === 500) {
+      throw new Error(`服务器错误: ${data?.message || '未知错误'}`);
+    } else {
+      throw new Error(`请求失败 (${status}): ${data?.message || '未知错误'}`);
+    }
+  } else if (error.request) {
+    // 请求已发送但没有收到响应
+    throw new Error('服务器无响应，请检查网络连接');
+  } else {
+    // 请求配置出错
+    throw new Error(`请求配置错误: ${error.message}`);
+  }
+};
+
+// API工具类
+class Api {
   /**
    * 发送GET请求
    * @param url 请求地址
    * @param params URL参数
    * @param config 请求配置
    */
-  async get<T = any>(url: string, params?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async get<T = any>(url: string, params?: any, config?: AxiosRequestConfig): Promise<T> {
     try {
-      const response = await apiClient.get<ApiResponse<T>>(url, { 
+      console.log(`发送GET请求: ${url}`, { params });
+      const response = await apiClient.get<DynamicResponse<T>>(url, { 
         params, 
         ...config 
       });
-      return response.data;
+      console.log(`GET请求响应: ${url}`, response);
+      
+      // 处理DynamicResponse结构
+      if (response.data && typeof response.data === 'object') {
+        if ('code' in response.data && 'msg' in response.data) {
+          const dynamicResponse = response.data as DynamicResponse<T>;
+          
+          // 检查响应状态
+          if (dynamicResponse.code === 200 || dynamicResponse.code === 0) {
+            return dynamicResponse.data;
+          } else {
+            console.error('API错误:', dynamicResponse.msg);
+            throw new Error(dynamicResponse.msg || '请求失败');
+          }
+        } else {
+          // 如果不是标准响应结构，直接返回数据
+          return response.data as T;
+        }
+      } else {
+        throw new Error('无效的响应数据');
+      }
     } catch (error) {
       throw handleApiError(error);
     }
-  },
-  
+  }
+
   /**
    * 发送POST请求
    * @param url 请求地址
-   * @param data 请求体数据
+   * @param data 请求数据
    * @param config 请求配置
    */
-  async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
     try {
-      const response = await apiClient.post<ApiResponse<T>>(url, data, config);
-      return response.data;
+      const response = await apiClient.post<DynamicResponse<T>>(url, data, config);
+      
+      // 处理DynamicResponse结构
+      if (response.data && typeof response.data === 'object') {
+        if ('code' in response.data && 'msg' in response.data) {
+          const dynamicResponse = response.data as DynamicResponse<T>;
+          
+          // 检查响应状态
+          if (dynamicResponse.code === 200 || dynamicResponse.code === 0) {
+            return dynamicResponse.data;
+          } else {
+            console.error('API错误:', dynamicResponse.msg);
+            throw new Error(dynamicResponse.msg || '请求失败');
+          }
+        } else {
+          // 如果不是标准响应结构，直接返回数据
+          return response.data as T;
+        }
+      } else {
+        throw new Error('无效的响应数据');
+      }
     } catch (error) {
       throw handleApiError(error);
     }
-  },
-  
+  }
+
   /**
    * 发送PUT请求
    * @param url 请求地址
-   * @param data 请求体数据
+   * @param data 请求数据
    * @param config 请求配置
    */
-  async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
     try {
-      const response = await apiClient.put<ApiResponse<T>>(url, data, config);
-      return response.data;
+      const response = await apiClient.put<DynamicResponse<T>>(url, data, config);
+      
+      // 处理DynamicResponse结构
+      if (response.data && typeof response.data === 'object') {
+        if ('code' in response.data && 'msg' in response.data) {
+          const dynamicResponse = response.data as DynamicResponse<T>;
+          
+          // 检查响应状态
+          if (dynamicResponse.code === 200 || dynamicResponse.code === 0) {
+            return dynamicResponse.data;
+          } else {
+            console.error('API错误:', dynamicResponse.msg);
+            throw new Error(dynamicResponse.msg || '请求失败');
+          }
+        } else {
+          // 如果不是标准响应结构，直接返回数据
+          return response.data as T;
+        }
+      } else {
+        throw new Error('无效的响应数据');
+      }
     } catch (error) {
       throw handleApiError(error);
     }
-  },
-  
+  }
+
   /**
    * 发送DELETE请求
    * @param url 请求地址
    * @param config 请求配置
    */
-  async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
     try {
-      const response = await apiClient.delete<ApiResponse<T>>(url, config);
-      return response.data;
+      const response = await apiClient.delete<DynamicResponse<T>>(url, config);
+      
+      // 处理DynamicResponse结构
+      if (response.data && typeof response.data === 'object') {
+        if ('code' in response.data && 'msg' in response.data) {
+          const dynamicResponse = response.data as DynamicResponse<T>;
+          
+          // 检查响应状态
+          if (dynamicResponse.code === 200 || dynamicResponse.code === 0) {
+            return dynamicResponse.data;
+          } else {
+            console.error('API错误:', dynamicResponse.msg);
+            throw new Error(dynamicResponse.msg || '请求失败');
+          }
+        } else {
+          // 如果不是标准响应结构，直接返回数据
+          return response.data as T;
+        }
+      } else {
+        throw new Error('无效的响应数据');
+      }
     } catch (error) {
       throw handleApiError(error);
     }
-  },
-  
-  /**
-   * 发送PATCH请求
-   * @param url 请求地址
-   * @param data 请求体数据
-   * @param config 请求配置
-   */
-  async patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    try {
-      const response = await apiClient.patch<ApiResponse<T>>(url, data, config);
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error);
-    }
   }
-};
-
-// 针对核心服务的API
-export const coreApi = {
-  get<T = any>(url: string, params?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    return api.get<T>(`${API_PREFIXES.CORE}${url}`, params, config);
-  },
-  
-  post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    return api.post<T>(`${API_PREFIXES.CORE}${url}`, data, config);
-  },
-  
-  put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    return api.put<T>(`${API_PREFIXES.CORE}${url}`, data, config);
-  },
-  
-  delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    return api.delete<T>(`${API_PREFIXES.CORE}${url}`, config);
-  },
-  
-  patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    return api.patch<T>(`${API_PREFIXES.CORE}${url}`, data, config);
-  }
-};
-
-// 针对认证服务的API
-export const authApi = {
-  get<T = any>(url: string, params?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    return api.get<T>(`${API_PREFIXES.AUTH}${url}`, params, config);
-  },
-  
-  post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    return api.post<T>(`${API_PREFIXES.AUTH}${url}`, data, config);
-  }
-};
-
-// 针对消息服务的API
-export const messageApi = {
-  get<T = any>(url: string, params?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    return api.get<T>(`${API_PREFIXES.MESSAGE}${url}`, params, config);
-  },
-  
-  post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    return api.post<T>(`${API_PREFIXES.MESSAGE}${url}`, data, config);
-  }
-};
-
-/**
- * 统一处理API错误
- * @param error 错误对象
- */
-function handleApiError(error: any): Error {
-  if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError<ApiResponse>;
-    
-    // 如果有响应数据
-    if (axiosError.response?.data) {
-      const { message } = axiosError.response.data;
-      return new Error(message || '请求失败');
-    }
-    
-    // 网络错误
-    if (error.message === 'Network Error') {
-      return new Error('网络连接失败，请检查您的网络');
-    }
-    
-    // 请求超时
-    if (error.message.includes('timeout')) {
-      return new Error('请求超时，请稍后重试');
-    }
-  }
-  
-  // 默认错误信息
-  return new Error(error?.message || '未知错误');
 }
 
-export default api; 
+// 创建API实例
+export const api = new Api();
+
+// 创建特定服务的API客户端
+class ServiceApi {
+  private basePrefix: string;
+
+  constructor(basePrefix: string) {
+    this.basePrefix = basePrefix;
+  }
+
+  get<T = any>(url: string, params?: any, config?: AxiosRequestConfig): Promise<T> {
+    return api.get<T>(`${this.basePrefix}${url}`, params, config);
+  }
+
+  post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+    return api.post<T>(`${this.basePrefix}${url}`, data, config);
+  }
+
+  put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+    return api.put<T>(`${this.basePrefix}${url}`, data, config);
+  }
+
+  delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    return api.delete<T>(`${this.basePrefix}${url}`, config);
+  }
+}
+
+// 导出特定服务的API客户端
+export const authApi = new ServiceApi(API_PREFIXES.AUTH);
+export const coreApi = new ServiceApi(API_PREFIXES.CORE);
+export const messageApi = new ServiceApi(API_PREFIXES.MESSAGE); 
