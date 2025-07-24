@@ -80,7 +80,8 @@ const generateBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
     "schedule": "发布计划",
     "roles": "角色管理",
     "map": "设备地图",
-    "groups": "终端组"
+    "groups": "终端组",
+    "profile": "个人资料"
   };
   
   // 构建面包屑数组

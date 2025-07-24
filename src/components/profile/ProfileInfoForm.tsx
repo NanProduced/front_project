@@ -83,7 +83,7 @@ const ProfileInfoForm: React.FC<ProfileInfoFormProps> = ({
             <Input 
               disabled 
               placeholder="用户名" 
-              className="bg-[#050b1f] border-gray-700 text-gray-300 hover:border-blue-500 focus:border-blue-500" 
+              className="bg-[#0a1022] border-gray-600 text-gray-300" 
             />
           </Form.Item>
         </Col>
@@ -101,7 +101,7 @@ const ProfileInfoForm: React.FC<ProfileInfoFormProps> = ({
             <Input 
               disabled 
               placeholder="所属组织" 
-              className="bg-[#050b1f] border-gray-700 text-gray-300 hover:border-blue-500 focus:border-blue-500" 
+              className="bg-[#0a1022] border-gray-600 text-gray-300" 
             />
           </Form.Item>
         </Col>
@@ -128,7 +128,7 @@ const ProfileInfoForm: React.FC<ProfileInfoFormProps> = ({
             <Input 
               disabled={!isEditing} 
               placeholder="请输入邮箱" 
-              className={`${!isEditing ? 'bg-[#050b1f]' : 'bg-[#0a1022]'} border-gray-700 text-gray-300 hover:border-blue-500 focus:border-blue-500`}
+              className={`${!isEditing ? 'bg-[#0a1022] border-gray-600' : 'bg-[#0f1629] border-blue-500'} text-gray-300`}
             />
           </Form.Item>
         </Col>
@@ -149,7 +149,7 @@ const ProfileInfoForm: React.FC<ProfileInfoFormProps> = ({
             <Input 
               disabled={!isEditing} 
               placeholder="请输入手机号" 
-              className={`${!isEditing ? 'bg-[#050b1f]' : 'bg-[#0a1022]'} border-gray-700 text-gray-300 hover:border-blue-500 focus:border-blue-500`}
+              className={`${!isEditing ? 'bg-[#0a1022] border-gray-600' : 'bg-[#0f1629] border-blue-500'} text-gray-300`}
             />
           </Form.Item>
         </Col>
@@ -167,7 +167,7 @@ const ProfileInfoForm: React.FC<ProfileInfoFormProps> = ({
           </div>
         }
       >
-        <div className="p-3 bg-[#050b1f] border border-gray-700 rounded-md min-h-[40px]">
+        <div className="p-3 bg-[#0a1022] border border-gray-600 rounded-lg min-h-[40px]">
           {renderRoleTags()}
         </div>
       </Form.Item>
@@ -177,14 +177,14 @@ const ProfileInfoForm: React.FC<ProfileInfoFormProps> = ({
           <Button 
             type="default" 
             onClick={onCancel} 
-            className="mr-4 border-gray-600 text-gray-300 hover:text-white"
+            className="mr-4 bg-[#374151] border-gray-600 text-gray-300 hover:bg-[#4b5563] hover:text-white hover:border-gray-500"
           >
             取消
           </Button>
           <Button 
             type="primary" 
             htmlType="submit"
-            className="bg-blue-600 hover:bg-blue-700 px-6"
+            className="bg-blue-600 hover:bg-blue-700 border-blue-600 hover:border-blue-700 px-6"
           >
             保存
           </Button>

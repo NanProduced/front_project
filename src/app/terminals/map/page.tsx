@@ -37,8 +37,9 @@ export default function TerminalMapPage() {
       <div className="mt-6 bg-[#0f172a] border border-gray-800 rounded-lg p-4 h-[calc(100vh-240px)] relative">
         {/* 加载状态 */}
         {terminalsLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 z-10">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 z-10">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+            <p className="text-white text-lg">加载地图数据中...</p>
           </div>
         )}
         
@@ -113,8 +114,9 @@ export default function TerminalMapPage() {
           <h3 className="text-lg font-medium text-white mb-3">终端位置分布</h3>
           <div className="h-48 overflow-auto">
             {terminalsLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <div className="flex flex-col items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-2"></div>
+                <p className="text-gray-400 text-sm">加载中...</p>
               </div>
             ) : terminalsData && terminalsData.content.length > 0 ? (
               <div className="space-y-2">

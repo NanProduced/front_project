@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Card, Avatar, Spin, Tabs, Button, message, Tag } from 'antd';
+import { Card, Avatar, Tabs, Button, message, Tag } from 'antd';
 import { UserOutlined, EditOutlined, LockOutlined, MailOutlined, PhoneOutlined, BankOutlined } from '@ant-design/icons';
 import PageTitle from '@/components/PageTitle';
 import ProfileInfoForm from '@/components/profile/ProfileInfoForm';
@@ -122,10 +122,9 @@ export default function ProfilePage() {
   // 如果正在加载，显示加载中
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen p-6 bg-[#0a1022]">
-        <Spin tip="加载中..." size="large">
-          <div className="p-12" />
-        </Spin>
+      <div className="flex flex-col justify-center items-center min-h-screen p-6 bg-[#0a1022]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+        <p className="text-gray-300 text-lg">加载中...</p>
       </div>
     );
   }
@@ -212,11 +211,10 @@ export default function ProfilePage() {
         {/* 用户信息卡片 - 占3列 */}
         <div className="lg:col-span-3">
           <Card 
-            className="bg-[#0a1022] border border-gray-800 shadow-xl text-center" 
-            variant="outlined"
+            className="bg-[#0c1424] border-0 shadow-xl text-center" 
             styles={{
-              header: { backgroundColor: '#0a1022', borderColor: '#1f2937' },
-              body: { backgroundColor: '#0a1022', padding: '16px' }
+              header: { backgroundColor: '#0c1424', borderColor: 'transparent' },
+              body: { backgroundColor: '#0c1424', padding: '24px' }
             }}
           >
             <div className="flex flex-col items-center">
@@ -237,13 +235,13 @@ export default function ProfilePage() {
               )}
               
               {/* 组织信息 */}
-              <div className="w-full px-2 py-2 rounded-md bg-[#050b1f] mb-3 flex items-center justify-center">
+              <div className="w-full px-3 py-2 rounded-lg bg-[#0a1022] mb-3 flex items-center justify-center border border-gray-800">
                 <BankOutlined className="mr-2 text-blue-400" />
-                <span className="text-gray-300">{userData.organizationName || '未分配组织'}</span>
+                <span className="text-gray-300 text-sm">{userData.organizationName || '未分配组织'}</span>
               </div>
               
               {/* 联系信息 */}
-              <div className="w-full bg-[#050b1f] rounded-md p-2">
+              <div className="w-full bg-[#0a1022] rounded-lg p-3 border border-gray-800">
                 {userData.email && (
                   <div className="flex items-center mb-2 text-gray-300 justify-center">
                     <MailOutlined className="mr-2 text-gray-500" />
@@ -269,11 +267,10 @@ export default function ProfilePage() {
         {/* 内容区域 - 占9列 */}
         <div className="lg:col-span-9">
           <Card 
-            className="bg-[#0a1022] border border-gray-800 shadow-xl"
-            variant="outlined"
+            className="bg-[#0c1424] border-0 shadow-xl"
             styles={{
-              header: { backgroundColor: '#0a1022', borderColor: '#1f2937' },
-              body: { backgroundColor: '#0a1022', padding: '12px 20px' }
+              header: { backgroundColor: '#0c1424', borderColor: 'transparent' },
+              body: { backgroundColor: '#0c1424', padding: '24px' }
             }}
           >
             <Tabs 

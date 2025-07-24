@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button, Card, Spin } from 'antd';
+import { Button, Card } from 'antd';
 import Link from 'next/link';
 
 export default function SimpleProfilePage() {
@@ -65,8 +65,9 @@ export default function SimpleProfilePage() {
       </Card>
       
       {isLoading ? (
-        <div className="flex justify-center my-4">
-          <Spin tip="加载中..." />
+        <div className="flex flex-col justify-center items-center my-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-2"></div>
+          <p className="text-gray-600">加载中...</p>
         </div>
       ) : (
         user ? (

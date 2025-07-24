@@ -375,8 +375,9 @@ export default function TerminalsPage() {
           {/* 终端表格 */}
           <div className="bg-[#0f172a] border border-gray-800 rounded-lg overflow-hidden">
             {terminalsLoading ? (
-              <div className="flex justify-center items-center py-20">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+              <div className="flex flex-col justify-center items-center py-20">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+                <p className="text-gray-400">加载终端数据中...</p>
               </div>
             ) : terminalsError ? (
               <div className="py-10 text-center">
