@@ -38,6 +38,14 @@ export interface User {
   createdTime: string;
   updatedTime: string;
   lastLoginTime?: string;
+  ugid?: number;
+  ugName?: string;
+}
+
+// 修改密码请求接口
+export interface ModifyPasswordRequest {
+  oldPassword: string;
+  newPassword: string;
 }
 
 export interface UserGroup {
@@ -53,13 +61,41 @@ export interface UserGroup {
  */
 export const getCurrentUser = async () => {
   try {
-    console.log('正在请求用户信息...');
-    // coreApi.get已经处理了DynamicResponse结构，直接返回data部分
-    const userData = await coreApi.get<UserInfoResponse>('/user/current');
-    console.log('用户信息获取成功:', userData);
+    console.log('userService: 正在请求用户信息...');
+    
+    // 添加超时处理
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('请求用户信息超时')), 10000);
+    });
+    
+    // 使用 Promise.race 来处理超时
+    const userData = await Promise.race([
+      coreApi.get<UserInfoResponse>('/user/current'),
+      timeoutPromise
+    ]) as UserInfoResponse;
+    
+    // 验证返回的数据结构
+    if (!userData || typeof userData !== 'object' || !('uid' in userData)) {
+      console.error('userService: 用户信息格式不正确:', userData);
+      throw new Error('获取的用户信息格式不正确');
+    }
+    
+    console.log('userService: 用户信息获取成功:', userData);
     return userData;
   } catch (error) {
-    console.error('获取用户信息失败:', error);
+    console.error('userService: 获取用户信息失败:', error);
+    // 处理特定错误类型
+    if (error instanceof Error) {
+      // 如果是网络错误，给出更详细的错误信息
+      if (error.message.includes('Network Error')) {
+        throw new Error('网络连接失败，请检查您的网络连接');
+      }
+      
+      // 如果是超时错误
+      if (error.message.includes('timeout')) {
+        throw new Error('服务器响应超时，请稍后再试');
+      }
+    }
     throw error;
   }
 };
@@ -172,6 +208,14 @@ export const getVisibleRoles = () => {
   return coreApi.get<{ id: string; name: string; code: string; description?: string }[]>('/role/get/visible');
 };
 
+/**
+ * 修改当前用户密码
+ * @param data 密码数据，包含旧密码和新密码
+ */
+export const modifyPassword = (data: ModifyPasswordRequest) => {
+  return coreApi.post('/user/modify/pwd', data);
+};
+
 export default {
   getCurrentUser,
   getUsers: getUserList, // Renamed from getUsers to getUserList to match new API
@@ -185,5 +229,6 @@ export default {
   createUserGroup,
   updateUserGroup,
   deleteUserGroup,
-  getVisibleRoles
+  getVisibleRoles,
+  modifyPassword
 }; 

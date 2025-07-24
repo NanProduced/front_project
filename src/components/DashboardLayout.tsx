@@ -8,6 +8,7 @@ import SiteSelector from "@/components/SiteSelector";
 import { SiteConfig } from "@/config/sites";
 import { getCurrentUser, UserInfoResponse } from "@/services/userService";
 import { useApi } from "@/hooks/useApi";
+import { useRouter } from 'next/navigation';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -22,6 +23,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [isNotificationsOpen, setNotificationsOpen] = useState(false);
   const [isUserMenuOpen, setUserMenuOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   
   // 使用useApi hook获取用户信息
   const { data: userData, loading: userLoading, error: userError, execute: fetchUser } = useApi(getCurrentUser);
@@ -319,7 +321,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                   <div className="py-1">
                     <button
                       className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 flex items-center"
-                      onClick={() => {/* 个人资料功能 */}}
+                      onClick={() => router.push('/profile')}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -328,7 +330,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                     </button>
                     <button
                       className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 flex items-center"
-                      onClick={() => {/* 设置功能 */}}
+                      onClick={() => router.push('/settings')}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />

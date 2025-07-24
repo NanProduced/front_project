@@ -30,12 +30,18 @@ const apiClient: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // 确保包含凭证(cookies)
 });
 
 // 请求拦截器
 apiClient.interceptors.request.use(
   (config) => {
-    // 可以在这里添加认证信息，如token
+    // 确保所有请求都带上凭证
+    config.withCredentials = true;
+    
+    // 添加调试信息
+    console.log(`API请求: ${config.method?.toUpperCase()} ${config.url}`);
+    
     return config;
   },
   (error) => {
@@ -49,12 +55,20 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error: AxiosError) => {
+    // 详细记录API错误
+    console.error('API响应错误:', error.message);
+    if (error.response) {
+      console.error('错误状态码:', error.response.status);
+      console.error('错误数据:', error.response.data);
+    }
+
     // 处理401未授权错误，重定向到登录页
     if (error.response && error.response.status === 401) {
-      console.error('用户未授权，重定向到首页');
+      console.error('用户未授权，准备重定向到登录页');
       // 在客户端环境下执行重定向
       if (typeof window !== 'undefined') {
-        window.location.href = '/';
+        console.log('执行重定向到登录页');
+        window.location.href = '/login';
       }
     }
     return Promise.reject(error);
@@ -63,7 +77,7 @@ apiClient.interceptors.response.use(
 
 // 处理API错误
 const handleApiError = (error: any): never => {
-  console.error('API请求错误:', error);
+  console.error('API请求错误处理:', error);
   
   if (error.response) {
     // 服务器响应了，但状态码不在2xx范围
@@ -71,19 +85,25 @@ const handleApiError = (error: any): never => {
     const data = error.response.data;
     
     if (status === 401) {
+      console.error('未授权错误(401): 需要重新登录');
       throw new Error('未授权，请重新登录');
     } else if (status === 403) {
+      console.error('禁止访问错误(403): 权限不足');
       throw new Error('权限不足，无法访问');
     } else if (status === 500) {
-      throw new Error(`服务器错误: ${data?.message || '未知错误'}`);
+      console.error('服务器错误(500):', data);
+      throw new Error(`服务器错误: ${data?.message || data?.msg || '未知错误'}`);
     } else {
-      throw new Error(`请求失败 (${status}): ${data?.message || '未知错误'}`);
+      console.error(`请求失败 (${status}):`, data);
+      throw new Error(`请求失败 (${status}): ${data?.message || data?.msg || '未知错误'}`);
     }
   } else if (error.request) {
     // 请求已发送但没有收到响应
+    console.error('网络错误: 服务器无响应', error.request);
     throw new Error('服务器无响应，请检查网络连接');
   } else {
     // 请求配置出错
+    console.error('请求配置错误:', error.message);
     throw new Error(`请求配置错误: ${error.message}`);
   }
 };

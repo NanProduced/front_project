@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SITES, SiteConfig } from '@/config/sites';
 
 interface SiteSelectorProps {
@@ -12,15 +12,24 @@ interface SiteSelectorProps {
 const SiteSelector: React.FC<SiteSelectorProps> = ({ onChange, className = '', readOnly = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedSite, setSelectedSite] = useState<SiteConfig>(SITES[0]);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // 关闭下拉菜单的点击外部事件监听
-    const handleClickOutside = () => setIsOpen(false);
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSiteChange = (site: SiteConfig) => {
+  const handleSiteChange = (site: SiteConfig, e: React.MouseEvent) => {
+    // 防止事件冒泡
+    e.stopPropagation();
+    
     // 如果是只读模式，则不允许切换站点
     if (readOnly) return;
     
@@ -32,15 +41,18 @@ const SiteSelector: React.FC<SiteSelectorProps> = ({ onChange, className = '', r
   };
 
   const toggleDropdown = (e: React.MouseEvent) => {
+    // 防止事件冒泡
+    e.stopPropagation();
+    e.preventDefault();
+    
     // 如果是只读模式，则不允许打开下拉菜单
     if (readOnly) return;
     
-    e.stopPropagation();
     setIsOpen(!isOpen);
   };
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative ${className}`} ref={dropdownRef}>
       <button
         onClick={toggleDropdown}
         className={`flex items-center px-3 py-1.5 rounded-md ${
@@ -68,12 +80,12 @@ const SiteSelector: React.FC<SiteSelectorProps> = ({ onChange, className = '', r
       </button>
 
       {isOpen && !readOnly && (
-        <div className="absolute right-0 mt-2 w-48 bg-[#0f172a] border border-gray-800 rounded-md shadow-lg z-20">
+        <div className="absolute right-0 mt-2 w-48 bg-[#0f172a] border border-gray-800 rounded-md shadow-lg z-50">
           <div className="py-1">
             {SITES.map((site) => (
               <button
                 key={site.id}
-                onClick={() => handleSiteChange(site)}
+                onClick={(e) => handleSiteChange(site, e)}
                 className={`flex items-center w-full text-left px-4 py-2 text-sm ${
                   selectedSite.id === site.id 
                     ? 'bg-blue-900/20 text-blue-400' 

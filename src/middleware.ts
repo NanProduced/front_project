@@ -31,6 +31,10 @@ const protectedRoutes = [
     path: '/analytics',
     roles: ['admin', 'user'] // 管理员和普通用户可访问分析页面
   },
+  {
+    path: '/profile',
+    roles: ['admin', 'user', 'viewer'] // 所有登录用户都可以访问个人资料
+  },
 ];
 
 // 公开路径，不需要认证
