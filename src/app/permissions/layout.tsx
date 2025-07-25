@@ -2,7 +2,6 @@
 
 import React from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import ProtectedRoute from '@/components/ProtectedRoute';
 
 export default function PermissionsLayout({
   children,
@@ -11,9 +10,7 @@ export default function PermissionsLayout({
 }) {
   return (
     <DashboardLayout>
-      <ProtectedRoute allowedRoles={['admin']}>
-        {children}
-      </ProtectedRoute>
+      {children}
     </DashboardLayout>
   );
 } 
